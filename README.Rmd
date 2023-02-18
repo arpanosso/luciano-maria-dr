@@ -13,4 +13,50 @@ knitr::opts_chunk$set(
 
 # luciano-maria-dr
 
+## Organizandos os dados, compilando, selecionando e criando datas
+
+```{r}
+`%>%` <- magrittr::`%>%`
+
+amazon_data <- rbind(readr::read_rds("data/df_1.rds"),
+readr::read_rds("data/df_2.rds"),
+readr::read_rds("data/df_3.rds")) %>%
+  janitor::clean_names() %>%
+  dplyr::mutate(year = as.numeric(substr(ymd, 1, 4)),
+         month = as.numeric(substr(ymd, 5, 6)),
+         day = as.numeric(substr(ymd, 7, 8)),
+         date = lubridate::make_date(year,month,day)) %>%
+  dplyr::select(-ymd, -flag_am) %>%
+  dplyr::relocate(long,lat,date,year,month,day)
+dplyr::glimpse(amazon_data)
+```
+
+## Mapas para teste
+
+```{r}
+amazon_data %>% 
+  dplyr::group_by(year,month) %>% 
+  dplyr::summarise(co2_mean = mean(co2,na.rm=TRUE),
+                   n=dplyr::n(),
+                   co2_stderr = sd(co2,na.rm=TRUE)/(n)^.5) %>% 
+  dplyr::mutate(ym = lubridate::make_date(year,month,day=1)
+                ) %>% 
+  ggplot2::ggplot(ggplot2::aes(ym,co2_mean)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line()
+```
+
+## Espacializando
+
+```{r}
+amazon_data %>%
+  dplyr::filter(month == 4) %>% 
+  dplyr::group_by(year, long,lat) %>% 
+  dplyr::summarise(co2_mean = mean(co2,na.rm=TRUE),
+                   n=dplyr::n(),
+                   co2_stderr = sd(co2,na.rm=TRUE)/(n)^.5) %>% 
+  ggplot2::ggplot(ggplot2::aes(long,lat,color=co2_mean)) +
+  ggplot2::geom_point() +
+  ggplot2::facet_wrap(~year)
+```
 
